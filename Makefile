@@ -2,7 +2,7 @@ CXXFLAGS = #-std=c++11 -O3 -Werror -Wall -Wextra -Wshadow
 CXX = nvcc
 
 CPU_EXE = juliaCPU
-CPU = cuda_Julia
+CPU = cuda_h_Julia
 LINK = lodepng.h lodepng.cpp
 
 $(CPU): $(LINK)
