@@ -2,15 +2,15 @@
 #include "lodepng.h"
 #include<vector>
 #include<fstream>
-#include<math.h>
+//#include<math.h>
 #include<sys/time.h>
 
 
-#define T 64 //number of threads/block
-#define N 256 //number of blocks per grid
+#define T 1024 //number of threads/block(32,32)
+#define N 64 //number of blocks per grid (256,256)
 //Encode from raw pixels to disk with a single function call
 //he image argument has width * height RGBA pixels or width * height * 4 bytes
-void encodeImage(const char* filename, std::vector<unsigned char>& image, unsigned width, unsigned height)
+void encodeImage(const char* filename, unsigned char const* image, unsigned width, unsigned height)
 {
 	//Encode the image
 	unsigned error = lodepng::encode(filename, image, width, height);
@@ -24,20 +24,18 @@ double getSeconds()
 	gettimeofday(&tp, NULL);
 	return ((double)tp.tv_sec + (double)tp.tv_usec * 1e-6);
 }
+__global__ void evalJulia(double*, int*, int, int, double, double, unsigned char*, const unsigned int);
 
-__global__ void evalJulia(double* d_range,
-			  int max_iteration){
-
-	int x_index = threadIdx.x + blockIdx.x*blockDim.x;
-	int y_index = threadIdx.y + blockIdx.y*blockDim.y;
-	int index = x_index * T*y_index;
-}
 
 
 int main()
 {
 	const unsigned int img_size = 2048; // Image size
 	double *range = new double[img_size]; //Stores all the values between range -2 to 2 with spacing
+	double *d_range;
+	cudaMalloc((void**)&d_range, img_size*sizeof(double));
+	
+	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	const double spacing = 4.0 / (double)img_size; //spacing is length/image size
 	const double & h = spacing;	//spacing alias
 		
@@ -46,68 +44,78 @@ int main()
 	{
 		range[i] = -2.0 + (double)(i)*h;
 	}
-
+	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	cudaMemcpy(range, d_range, img_size*sizeof(double), cudaMemcpyHostToDevice);
+	int pixel_limit = 12;
 	double c_real = -0.8;	//constant complex real
 	double c_img = 0.2; 	//constant complex imaginary
 	int* iteration = new int[img_size*img_size]; //iterations done per pixel
-	double mod2 = 0.0; //absolute value squared
-	double mod = 0.0; // absolute value
-	const int iteration_limit = 200; // maximum number of iterations
-	//computuation begins here:
+	int* d_iteration;
+	std::cout << "before kernel cal"<<std::endl;
+	cudaMalloc((void**)&d_iteration, (img_size*img_size*sizeof(int)));
+	int iteration_limit = 50; // maximum number of iterations
+	//char for colourbit size pixels * 4 byte
+	/*std::vector <unsigned char> colourBit;
+	colourBit.resize(img_size*img_size * 4);*/
+	unsigned char*  colourBit = new unsigned char[img_size*img_size * 4];
 	double wcTimeStart= 0.0, wcTimeEnd=0.0;
+	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	//computuation begins here:
 	wcTimeStart = getSeconds(); //Start time
-	for (unsigned int y = 0; y < img_size; ++y){
-		for (unsigned int x = 0; x < img_size; ++x) {
-			mod = 0.0;
-			mod2 = 0.0;
-			double real=0.0, img= 0.0; //real and imaginary part of complex number z
-			//set initial value
-			real = range[x];
-			img = range[y];
-			//calculate absolute value
-			mod2 = real*real + img*img;
-			mod = sqrt(mod2);
-			double temp=0.0; //temp value to eliminate data dependency
-			int iter = 0; //track iteration
-			c_real = -0.8;
-			c_img = 0.2;
-			while (mod<=20 && iter< iteration_limit)
-			{
-				//z_new = z_old^2+c
-				temp = real*real - img*img + c_real;
-				img = 2*real*img + c_img;
-				real = temp;
-				//calcutate absolute value
-				mod2 = real*real + img*img;
-				mod = sqrt(mod2);
-				++iter;
-			}
-			iteration[y*img_size + x] = iter ;
-		}
-	}
+	dim3 gridDim(N,N);
+	dim3 blockDim(T/32,T/32); //8 implicitly considered (number of threads in x and y directions)
+	evalJulia<<<gridDim, blockDim>>>(d_range, d_iteration, iteration_limit, pixel_limit, c_real, c_img, colourBit, img_size);
+	cudaMemcpy(d_iteration,iteration, (img_size*img_size*sizeof(int)),cudaMemcpyDeviceToHost);
 	wcTimeEnd = getSeconds(); //End time
 	std::cout << "Done with operations, begin image encoding!" << std::endl;
 	std::cout << "Time Taken for computation: " << wcTimeEnd-wcTimeStart << " sec" << std::endl;
-	//char for colourbit size pixels * 4 byte
-	std::vector <unsigned char> colourbit;
-    colourbit.resize(img_size*img_size * 4);
-    double inv = 1.0/(double)iteration_limit;
-	for (unsigned int j = 0; j < img_size; j++) {
-		for (unsigned int i = 0; i < img_size; i++) {
-			int num = (iteration[j*img_size + i]);
-			colourbit[4 * img_size*j +  4 * i + 3] = 255;
-			colourbit[4 * img_size*j + 4 * i + 2] = 0;//((double)num*0.02)*255;//(num >> 8)%255;
-			colourbit[4 * img_size*j +  4 * i + 1] = ((double)num*inv)*255;
-			colourbit[4 * img_size*j + 4 * i + 0] = ((double)num*inv)*255;
-			//std::cout<< (iteration[j*img_size + i]) << std::endl;
-		}
-	}
-	wcTimeEnd = getSeconds();//Final time
-	encodeImage("JuliaCPU.png", colourbit, img_size, img_size);
+	for(int i=0;i<img_size;i++)
+	for(int j=0;j<img_size;j++)
+//	for(int k = 0;k<4;k++)
+		std::cout<<iteration[j+2048*i]<<" ";
+		std::cout<<std::endl;
+	encodeImage("JuliaCPU.png", colourBit, img_size, img_size);
 	std::cout << "The image has been generated and is named as JuliaCPU.png" << std::endl;
 	std::cout << "Time Taken for image encoding: " << (wcTimeEnd-wcTimeStart)*1e3 << " milli-sec" << std::endl;
-
+	
+	cudaFree(d_iteration);
+	cudaFree(d_range);
 	delete(range);
 	delete(iteration);
+	delete(colourBit);
 	return 0;
 }
+
+__global__ void evalJulia(double* d_range,
+			  int* d_iteration,	
+			  int max_iteration,
+			  int pixel_limit,
+			  double c_real,
+			  double c_img,
+			  unsigned char* colourBit,
+			  const unsigned int img_size){
+	
+	int x_index = threadIdx.x + blockIdx.x*blockDim.x;
+	int y_index = threadIdx.y + blockIdx.y*blockDim.y;
+	int index = x_index + (T/32)*y_index;
+	double real = d_range[x_index];
+	double img = d_range[y_index];
+	double mod = real*real + img*img;
+	double temp;
+	int iter = 0;
+	while (mod <= (pixel_limit*pixel_limit) && iter < max_iteration){
+		temp = real*real - img*img + c_real;
+		img = 2*real*img + c_img;
+		real = temp;
+		mod = real * real + img * img;
+		iter++;}
+	
+	//update colour
+                        colourBit[4 *(img_size)*y_index + 4 * x_index + 3] = 255;
+                        colourBit[4 *(img_size)*y_index + 4 * x_index + 2] = 0;
+                        colourBit[4 *(img_size)*y_index + 4 * x_index + 1] = (unsigned char)iter;
+                        colourBit[4 *(img_size)*y_index + 4 * x_index + 0] = ((double)iter/200.0)*255;
+	d_iteration[index] = iter;
+	
+}
+

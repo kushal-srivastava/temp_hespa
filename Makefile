@@ -1,12 +1,12 @@
-CXXFLAGS = -std=c++11 -O3 -Werror -Wall -Wextra -Wshadow
-CXX = g++
+CXXFLAGS = #-std=c++11 -O3 -Werror -Wall -Wextra -Wshadow
+CXX = nvcc
 
 CPU_EXE = juliaCPU
-CPU = Cpu
+CPU = cuda_Julia
 LINK = lodepng.h lodepng.cpp
 
 $(CPU): $(LINK)
-	$(CXX) $(CXXFLAGS) lodepng.cpp $(CPU).cpp -o $(CPU_EXE)
+	$(CXX) $(CXXFLAGS) lodepng.cpp $(CPU).cu -o $(CPU_EXE)
 testc:
 	./juliaCPU
 
