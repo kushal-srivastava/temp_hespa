@@ -25,7 +25,7 @@ double getSeconds()
 	return ((double)tp.tv_sec + (double)tp.tv_usec * 1e-6);
 }
 //__global__ void evalJulia(double*, int*, int, int, double, double, unsigned char*, const unsigned int);
-__global__ void evalJulia(const double h,
+__global__ void evalJulia(double h,
 
 			  int max_iteration,
 
@@ -37,18 +37,15 @@ __global__ void evalJulia(const double h,
 
 			  unsigned char* colourBit,
 
-			  const unsigned int img_size){
+			  unsigned int img_size){
 
 	
 
 	int x_index = threadIdx.x + blockIdx.x*blockDim.x;
 
 	int y_index = threadIdx.y + blockIdx.y*blockDim.y;
-//	printf("%f
-	//int index = x_index + (T/32)*y_index;
 	double real = -2.0 + h * (double)x_index;
 	double img = -2.0 + h * (double)y_index;
-	//printf("%d %d \n ", x_index, y_index);
 	double mod = real*real + img*img;
 	double temp;
 	int iter = 0;
@@ -58,15 +55,13 @@ __global__ void evalJulia(const double h,
 		real = temp;
 		mod = real * real + img * img;
 		iter++;}
-	//__syncthreads();
-	printf("%d\n", y_index);
-	//update colour/*
-                        /*colourBit[4 *(img_size)*y_index + 4 * x_index + 3] = 255;
+		
+	//update colour
+                        colourBit[4 *(img_size)*y_index + 4 * x_index + 3] = 255;
                         colourBit[4 *(img_size)*y_index + 4 * x_index + 2] = 0;
                         colourBit[4 *(img_size)*y_index + 4 * x_index + 1] = (unsigned char)iter;
-                        colourBit[4 *(img_size)*y_index + 4 * x_index + 0] = ((double)iter/200.0)*255;*/
-	//d_iteration[index] = iter;
-	__syncthreads();
+                        colourBit[4 *(img_size)*y_index + 4 * x_index + 0] = ((double)iter/200.0)*255; 
+	
 }
 
 
@@ -74,15 +69,12 @@ __global__ void evalJulia(const double h,
 
 int main()
 {
-	const unsigned int img_size = 2048; // Image size
-	//double *range = new double[img_size]; //Stores all the values between range -2 to 2 with spacing
-	//double *d_range;
-	//cudaMalloc((void**)&d_range, img_size*sizeof(double));
-	
+	unsigned int img_size = 2048; // Image size
+		
 	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	const double spacing = 4.0 / (double)img_size; //spacing is length/image size
-	const double & h = spacing;	//spacing alias
-		std::cout<<h<<std::endl;
+	double spacing = 4.0 / (double)img_size; //spacing is length/image size
+	//const double & h = spacing;	//spacing alias
+//		std::cout<<h<<std::endl;
 	//convert the image size to be in the range of -2 to 2
 	/*for (unsigned int i = 0; i < img_size; ++i)
 	{
@@ -100,13 +92,15 @@ int main()
 	//cudaMalloc((void**)&d_iteration, (img_size*img_size*sizeof(int)));
 	int iteration_limit = 50; // maximum number of iterations
 	unsigned char*  colourBit = new unsigned char[img_size*img_size * 4];
+	unsigned char* d_colourBit;
+	cudaMalloc((void**)&d_colourBit, (img_size*img_size*4*sizeof(unsigned char)));
 	double wcTimeStart= 0.0, wcTimeEnd=0.0;
 	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	//computuation begins here:
 	wcTimeStart = getSeconds(); //Start time
-	dim3 gridDim(128,128); //(64,64)
-	dim3 blockDim(16,16); //16 implicitly considered (number of threads in x and y directions) (16,16)
-	evalJulia<<<gridDim, blockDim>>>(h, iteration_limit, pixel_limit, c_real, c_img, colourBit, img_size);
+	dim3 gridDim(64,64); //(64,64)
+	dim3 blockDim(32,32); //16 implicitly considered (number of threads in x and y directions) (16,16)
+	evalJulia<<<gridDim, blockDim>>>(spacing, iteration_limit, pixel_limit, c_real, c_img, d_colourBit, img_size);
 	cudaError_t errSync  = cudaGetLastError();
 	cudaError_t errAsync = cudaDeviceSynchronize();
 	if (errSync != cudaSuccess) 
@@ -114,7 +108,7 @@ int main()
 	if (errAsync != cudaSuccess)
   	printf("Async kernel error: %s\n", cudaGetErrorString(errAsync));
 //	__syncthreads();
-	//cudaMemcpy(d_iteration,iteration, (img_size*img_size*sizeof(int)),cudaMemcpyDeviceToHost);
+	cudaMemcpy(d_colourBit,colourBit, (img_size*img_size*sizeof(unsigned char)),cudaMemcpyDeviceToHost);
 	wcTimeEnd = getSeconds(); //End time
 	std::cout << "Done with operations, begin image encoding!" << std::endl;
 	std::cout << "Time Taken for computation: " << wcTimeEnd-wcTimeStart << " sec" << std::endl;
