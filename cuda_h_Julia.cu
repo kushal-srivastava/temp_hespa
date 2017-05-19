@@ -25,31 +25,32 @@ double getSeconds()
 	return ((double)tp.tv_sec + (double)tp.tv_usec * 1e-6);
 }
 
-__global__ void evalJulia(double h,
+__global__ void evalJulia(float h,
 
-			  int max_iteration,
+			  unsigned int max_iteration,
 
-			  int pixel_limit,
+			  float pixel_limit,
 
-			  double c_real,
+			  float c_real,
 
-			  double c_img,
+			  float c_img,
 
 			  unsigned char* colourBit,
 
-			  unsigned int img_size){
+			  long img_size){
 
 	
 	//printf("%f %d %d %f %f %d\n", h, max_iteration, pixel_limit, c_real, c_img, img_size);
-	int x_index = threadIdx.x + blockIdx.x*blockDim.x;
-
-	int y_index = threadIdx.y + blockIdx.y*blockDim.y;
-	double real = -2.0 + h * (double)x_index;
-	double img = -2.0 + h * (double)y_index;
-	double mod = real*real + img*img;
-	double temp=0;
+	long id = threadIdx.x + blockIdx.x*blockDim.x;
+	long x_index = id%img_size;
+	long y_index = id/img_size;
+	//long y_index = threadIdx.y + blockIdx.y*blockDim.y;
+	float real = -2.0 + h * (id%img_size);
+	float img = -2.0 + h * (id/img_size);
+	float mod = real*real + img*img;
+	float temp=0;
 	int iter = 0;
-	printf("%d %d\n", x_index, y_index);
+	printf("%d %d\n", id, int(id/img_size));
 	while ((mod <= (pixel_limit*pixel_limit)) && (iter < max_iteration))
 		{
 		//printf("real img mod %f %f %f %d\n", real, img, mod, iter);
@@ -76,17 +77,17 @@ __global__ void evalJulia(double h,
 
 int main()
 {
-	unsigned int img_size = 2048; // Image size(64x64)
+	long img_size = 2048; // Image size(64x64)
 		
 	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	std::cout<<"//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
-	double spacing = 4.0 / (double)img_size; //spacing is length/image size
-	std::cout<<"spacing "<<spacing<<std::endl;	
-	int pixel_limit = 20;
-	double c_real = 0.0;	//constant complex real
-	double c_img = 0.8; 	//constant complex imaginary
-	std::cout << "before kernel cal"<<std::endl;
-	int iteration_limit = 100; // maximum number of iterations
+	//std::cout<<"//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
+	float spacing = 4.0 / (double)img_size; //spacing is length/image size
+	//std::cout<<"spacing "<<spacing<<std::endl;	
+	float pixel_limit = 20;
+	float c_real = 0.0;	//constant complex real
+	float c_img = 0.8; 	//constant complex imaginary
+	//std::cout << "before kernel cal"<<std::endl;
+	unsigned int iteration_limit = 100; // maximum number of iterations
 	unsigned char*  colourBit = new unsigned char[img_size*img_size * 4];
 	unsigned char* d_colourBit;
 	cudaMalloc((void**)&d_colourBit, (img_size*img_size*4*sizeof(unsigned char)));
@@ -94,9 +95,12 @@ int main()
 	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	//computuation begins here:
 	wcTimeStart = getSeconds(); //Start time
-	dim3 gridDim(128,128); //(64,64)
-	dim3 blockDim(16,16); //16 implicitly considered (number of threads in x and y directions) (16,16)
-	evalJulia<<<gridDim, blockDim>>>(spacing, iteration_limit, pixel_limit, c_real, c_img, d_colourBit, img_size);
+	//dim3 gridDim(128,128); //(64,64)
+	//dim3 blockDim(16,16); //16 implicitly considered (number of threads in x and y directions) (16,16)
+	long threads_Block = 1024;
+	long blocks = (2048*2048)/threads_Block;
+	//long len = 2048;
+	evalJulia<<<blocks, threads_Block>>>(spacing, iteration_limit, pixel_limit, c_real, c_img, d_colourBit, img_size);
 	cudaError_t errSync  = cudaGetLastError();
 	cudaError_t errAsync = cudaDeviceSynchronize();
 	if (errSync != cudaSuccess) 
