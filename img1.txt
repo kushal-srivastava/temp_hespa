@@ -1,0 +1,7 @@
+spacing 0.0625
+before kernel cal
+Sync kernel error: invalid configuration argument
+Done with operations, begin image encoding!
+Time Taken for computation: 5.79357e-05 sec
+The image has been generated and is named as JuliaCPU.png
+Time Taken for image encoding: 0.0579357 milli-sec

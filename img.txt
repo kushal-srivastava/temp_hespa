@@ -1,0 +1,70 @@
+spacing 0.0625
+before kernel cal
+inside the loop 0 4 -59.961094 15.425000 2
+inside the loop 0 6 -51.442100 20.646875 2
+inside the loop 1 4 -56.997309 11.283447 2
+inside the loop 1 6 -49.126240 16.601636 2
+inside the loop 2 4 -54.001084 7.472266 2
+inside the loop 3 4 -50.983588 3.981201 2
+inside the loop 2 6 -46.758164 12.864062 2
+inside the loop 4 4 -47.955625 0.800000 2
+inside the loop 3 6 -44.349042 9.424634 2
+inside the loop 5 4 -44.927631 -2.081592 2
+inside the loop 6 4 -41.909678 -4.673828 2
+inside the loop 4 6 -41.909678 6.273828 2
+inside the loop 7 4 -38.911469 -6.986963 2
+inside the loop 5 6 -39.450507 3.402124 2
+inside the loop 0 5 -55.674604 18.200391 2
+inside the loop 1 5 -53.040549 14.102051 2
+inside the loop 6 6 -36.981602 0.800000 2
+inside the loop 2 5 -50.363984 10.322729 2
+inside the loop 7 6 -34.512665 -1.542065 2
+inside the loop 3 5 -47.656077 6.852539 2
+inside the loop 4 5 -44.927631 3.681592 2
+inside the loop 0 7 -47.273286 22.776172 2
+inside the loop 5 5 -42.189084 0.800000 2
+inside the loop 1 7 -45.264084 18.793555 2
+inside the loop 6 5 -39.450507 -1.802124 2
+inside the loop 7 5 -36.721604 -4.134668 2
+inside the loop 2 7 -43.193329 15.107251 2
+inside the loop 3 7 -41.072190 11.708105 2
+inside the loop 4 7 -38.911469 8.586963 2
+inside the loop 5 7 -36.721604 5.734668 2
+inside the loop 6 7 -34.512665 3.142065 2
+inside the loop 7 7 -32.294358 0.800000 2
+inside the loop 0 0 -77.440000 0.800000 2
+inside the loop 1 0 -73.041938 -3.408203 2
+inside the loop 2 0 -68.655381 -7.240625 2
+inside the loop 3 0 -64.291498 -10.708984 2
+inside the loop 4 0 -59.961094 -13.825000 2
+inside the loop 5 0 -55.674604 -16.600391 2
+inside the loop 6 0 -51.442100 -19.046875 2
+inside the loop 7 0 -47.273286 -21.176172 2
+inside the loop 0 1 -73.041938 5.008203 2
+inside the loop 0 2 -68.655381 8.840625 2
+inside the loop 1 1 -69.019749 0.800000 2
+inside the loop 2 1 -64.997529 -3.043774 2
+inside the loop 3 1 -60.986448 -6.534473 2
+inside the loop 4 1 -56.997309 -9.683447 2
+inside the loop 5 1 -53.040549 -12.502051 2
+inside the loop 6 1 -49.126240 -15.001636 2
+inside the loop 7 1 -45.264084 -17.193555 2
+inside the loop 1 2 -64.997529 4.643774 2
+inside the loop 2 2 -61.328477 0.800000 2
+inside the loop 3 2 -57.659394 -2.701685 2
+inside the loop 4 2 -54.001084 -5.872266 2
+inside the loop 5 2 -50.363984 -8.722729 2
+inside the loop 6 2 -46.758164 -11.264062 2
+inside the loop 7 2 -43.193329 -13.507251 2
+inside the loop 0 3 -64.291498 12.308984 2
+inside the loop 1 3 -60.986448 8.134473 2
+inside the loop 2 3 -57.659394 4.301685 2
+inside the loop 3 3 -54.321506 0.800000 2
+inside the loop 4 3 -50.983588 -2.381201 2
+inside the loop 5 3 -47.656077 -5.252539 2
+inside the loop 6 3 -44.349042 -7.824634 2
+inside the loop 7 3 -41.072190 -10.108105 2
+Done with operations, begin image encoding!
+Time Taken for computation: 0.00111294 sec
+The image has been generated and is named as JuliaCPU.png
+Time Taken for image encoding: 1.11294 milli-sec
