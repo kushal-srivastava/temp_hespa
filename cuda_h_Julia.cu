@@ -1,4 +1,5 @@
 #include<iostream>
+#include <cuda_runtime.h>
 #include "lodepng.h"
 #include<vector>
 #include<fstream>
@@ -37,10 +38,12 @@ __global__ void evalJulia(float h,
 
 			  unsigned char* colourBit,
 
-			  long img_size){
+			  long img_size,
+			  long* count){
 
 	
 	//printf("%f %d %d %f %f %d\n", h, max_iteration, pixel_limit, c_real, c_img, img_size);
+	//__shared__ unsigned int count;
 	long id = threadIdx.x + blockIdx.x*blockDim.x;
 	long x_index = id%img_size;
 	long y_index = id/img_size;
@@ -68,7 +71,10 @@ __global__ void evalJulia(float h,
                         colourBit[4 *(img_size)*y_index + 4 * x_index + 2] = 0;
                         colourBit[4 *(img_size)*y_index + 4 * x_index + 1] = 0;//(unsigned char)iter;
                         colourBit[4 *(img_size)*y_index + 4 * x_index + 0] = int(iter/200.0)*255; 
-	
+	(*count)++;
+
+	//__syncthreads();
+	//printf("%d\n", count);
 		
 }
 
@@ -77,7 +83,7 @@ __global__ void evalJulia(float h,
 
 int main()
 {
-	long img_size = 2048; // Image size(64x64)
+	long img_size = 1024; // Image size(64x64)
 		
 	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	//std::cout<<"//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<std::endl;
@@ -90,6 +96,9 @@ int main()
 	unsigned int iteration_limit = 100; // maximum number of iterations
 	unsigned char*  colourBit = new unsigned char[img_size*img_size * 4];
 	unsigned char* d_colourBit;
+	long count = 0;
+	long* d_count;
+	memset(d_count, 0,sizeof(long));
 	cudaMalloc((void**)&d_colourBit, (img_size*img_size*4*sizeof(unsigned char)));
 	double wcTimeStart= 0.0, wcTimeEnd=0.0;
 	//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -98,9 +107,10 @@ int main()
 	//dim3 gridDim(128,128); //(64,64)
 	//dim3 blockDim(16,16); //16 implicitly considered (number of threads in x and y directions) (16,16)
 	long threads_Block = 1024;
-	long blocks = (2048*2048)/threads_Block;
+	long blocks = (1024*1024)/threads_Block;
+	cudaMalloc((void**)&d_count, sizeof(long));
 	//long len = 2048;
-	evalJulia<<<blocks, threads_Block>>>(spacing, iteration_limit, pixel_limit, c_real, c_img, d_colourBit, img_size);
+	evalJulia<<<blocks, threads_Block>>>(spacing, iteration_limit, pixel_limit, c_real, c_img, d_colourBit, img_size, d_count);
 	cudaError_t errSync  = cudaGetLastError();
 	cudaError_t errAsync = cudaDeviceSynchronize();
 	if (errSync != cudaSuccess) 
@@ -108,6 +118,8 @@ int main()
 	if (errAsync != cudaSuccess)
   	printf("Async kernel error: %s\n", cudaGetErrorString(errAsync));
 	cudaMemcpy(colourBit,d_colourBit, (img_size*img_size*sizeof(unsigned char)),cudaMemcpyDeviceToHost);
+	cudaMemcpy(&count, d_count,sizeof(long),cudaMemcpyDeviceToHost);
+	std::cout<<"count"<<count<<std::endl;
 	wcTimeEnd = getSeconds(); //End time
 	std::cout << "Done with operations, begin image encoding!" << std::endl;
 	std::cout << "Time Taken for computation: " << wcTimeEnd-wcTimeStart << " sec" << std::endl;
